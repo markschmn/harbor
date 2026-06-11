@@ -14,6 +14,8 @@ use super::ports::{
     ConnectionParams, HostKeyPrompter, KnownHostsStore, ShellHandle, SftpClient, SshSession,
     SshTransport,
 };
+use super::transfer_service::SftpProvider;
+use async_trait::async_trait;
 
 /// An event describing a change to a session's lifecycle. The presentation
 /// layer forwards these to the UI.
@@ -146,6 +148,15 @@ impl SessionService {
     /// Number of registered sessions (connected or not).
     pub async fn count(&self) -> usize {
         self.sessions.lock().await.len()
+    }
+}
+
+/// Lets the transfer manager obtain an SFTP client for any live session without
+/// coupling it to the concrete [`SessionService`].
+#[async_trait]
+impl SftpProvider for SessionService {
+    async fn sftp_for(&self, id: SessionId) -> Result<Arc<dyn SftpClient>> {
+        self.sftp(id).await
     }
 }
 

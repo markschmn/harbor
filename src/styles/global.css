@@ -1,0 +1,187 @@
+/* ============================================================================
+   Harbor design system
+   A clean, minimal, modern token set with dark (default) and light themes.
+   ========================================================================== */
+
+@import "@xterm/xterm/css/xterm.css";
+
+/* ---- Design tokens -------------------------------------------------------- */
+
+:root {
+  /* Accent — a calm maritime teal/indigo blend */
+  --accent: #5b8def;
+  --accent-strong: #3f72e0;
+  --accent-soft: rgba(91, 141, 239, 0.14);
+  --accent-contrast: #ffffff;
+
+  --success: #34c759;
+  --warning: #ffb020;
+  --danger: #ff5a5f;
+  --danger-soft: rgba(255, 90, 95, 0.14);
+
+  /* Radii */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+
+  /* Spacing scale */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+
+  /* Typography */
+  --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  --transition: 160ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark theme (default) */
+:root,
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --bg-elev: #161b22;
+  --bg-elev-2: #1c2430;
+  --bg-hover: #222b38;
+  --bg-active: #2a3543;
+  --surface: #161b22;
+  --border: #283040;
+  --border-soft: #1f2733;
+  --text: #e6edf3;
+  --text-muted: #9aa7b5;
+  --text-faint: #6b7785;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --terminal-bg: #0a0e14;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #f6f8fb;
+  --bg-elev: #ffffff;
+  --bg-elev-2: #ffffff;
+  --bg-hover: #eef2f7;
+  --bg-active: #e4ebf4;
+  --surface: #ffffff;
+  --border: #dde3ec;
+  --border-soft: #e7ecf3;
+  --text: #1a2230;
+  --text-muted: #5a6776;
+  --text-faint: #8b97a6;
+  --shadow: 0 10px 34px rgba(31, 45, 70, 0.12);
+  --shadow-soft: 0 2px 10px rgba(31, 45, 70, 0.08);
+  --terminal-bg: #0a0e14;
+  color-scheme: light;
+}
+
+/* ---- Reset ---------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  user-select: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input,
+textarea {
+  user-select: text;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ---- Animations ----------------------------------------------------------- */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}

@@ -1,0 +1,138 @@
+import { useEffect, useRef } from "react";
+import { Terminal } from "@xterm/xterm";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import * as api from "@/services/api";
+import { EVENTS, on } from "@/services/events";
+import { errorMessage } from "@/stores/toast";
+import type { TerminalClosed, TerminalData } from "@/types";
+
+const TERMINAL_THEME = {
+  background: "#0a0e14",
+  foreground: "#cdd6e3",
+  cursor: "#5b8def",
+  cursorAccent: "#0a0e14",
+  selectionBackground: "rgba(91,141,239,0.3)",
+  black: "#11151c",
+  red: "#ff5a5f",
+  green: "#34c759",
+  yellow: "#ffb020",
+  blue: "#5b8def",
+  magenta: "#bd93f9",
+  cyan: "#56c2d6",
+  white: "#cdd6e3",
+  brightBlack: "#5b6673",
+  brightRed: "#ff7a7f",
+  brightGreen: "#5cd97a",
+  brightYellow: "#ffc04d",
+  brightBlue: "#7da6f5",
+  brightMagenta: "#d0a8ff",
+  brightCyan: "#7ad4e6",
+  brightWhite: "#ffffff",
+};
+
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+export function TerminalPane({
+  sessionId,
+  active,
+}: {
+  sessionId: string;
+  active: boolean;
+}) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const termRef = useRef<Terminal | null>(null);
+  const fitRef = useRef<FitAddon | null>(null);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+
+    const term = new Terminal({
+      fontFamily:
+        '"JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace',
+      fontSize: 13,
+      lineHeight: 1.2,
+      cursorBlink: true,
+      scrollback: 8000,
+      theme: TERMINAL_THEME,
+      allowProposedApi: true,
+    });
+    const fit = new FitAddon();
+    term.loadAddon(fit);
+    term.loadAddon(new WebLinksAddon());
+    term.open(host);
+    fit.fit();
+    termRef.current = term;
+    fitRef.current = fit;
+
+    // Forward keystrokes to the remote shell.
+    const dataSub = term.onData((data) => {
+      api.sendInput(sessionId, data).catch(() => {});
+    });
+    // Inform the backend of terminal size changes.
+    const resizeSub = term.onResize(({ cols, rows }) => {
+      api.resizeTerminal(sessionId, cols, rows).catch(() => {});
+    });
+
+    // Receive output for this session.
+    const unlisteners: Array<() => void> = [];
+    on<TerminalData>(EVENTS.terminalData, (payload) => {
+      if (payload.session_id === sessionId) {
+        term.write(base64ToBytes(payload.data));
+      }
+    }).then((fn) => unlisteners.push(fn));
+    on<TerminalClosed>(EVENTS.terminalClosed, (payload) => {
+      if (payload.session_id === sessionId) {
+        const code = payload.exit_code ?? 0;
+        term.write(`\r\n\x1b[90m[session closed${code ? ` · exit ${code}` : ""}]\x1b[0m\r\n`);
+      }
+    }).then((fn) => unlisteners.push(fn));
+
+    // Keep the PTY sized to the element.
+    const ro = new ResizeObserver(() => {
+      try {
+        fit.fit();
+      } catch {
+        /* element not visible */
+      }
+    });
+    ro.observe(host);
+
+    // Open the interactive shell once the terminal has a real size.
+    api.openShell(sessionId, term.cols, term.rows).catch((e) => {
+      term.write(`\r\n\x1b[31mFailed to open shell: ${errorMessage(e)}\x1b[0m\r\n`);
+    });
+
+    return () => {
+      dataSub.dispose();
+      resizeSub.dispose();
+      ro.disconnect();
+      unlisteners.forEach((fn) => fn());
+      term.dispose();
+      termRef.current = null;
+      fitRef.current = null;
+    };
+  }, [sessionId]);
+
+  // When this pane becomes visible, refit and focus.
+  useEffect(() => {
+    if (!active) return;
+    const id = window.setTimeout(() => {
+      try {
+        fitRef.current?.fit();
+        termRef.current?.focus();
+      } catch {
+        /* ignore */
+      }
+    }, 30);
+    return () => window.clearTimeout(id);
+  }, [active]);
+
+  return <div className="terminal-host" ref={hostRef} />;
+}

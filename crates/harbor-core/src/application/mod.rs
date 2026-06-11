@@ -9,9 +9,11 @@ pub mod ports;
 mod key_service;
 mod profile_service;
 mod session_service;
-mod transfer_service;
+pub mod transfer_service;
 
 pub use key_service::KeyService;
 pub use profile_service::ProfileService;
 pub use session_service::{SessionEvent, SessionService};
-pub use transfer_service::{TransferRequest, TransferService};
+pub use transfer_service::{
+    SftpProvider, TransferEvent, TransferRequest, TransferService,
+};

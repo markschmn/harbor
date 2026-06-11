@@ -30,6 +30,7 @@ tauri-plugin-os = "2"
 tauri-plugin-opener = "2"
 
 tokio.workspace = true
+async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tracing.workspace = true
@@ -37,6 +38,8 @@ tracing-subscriber.workspace = true
 secrecy.workspace = true
 time.workspace = true
 futures.workspace = true
+uuid.workspace = true
+base64.workspace = true
 
 [features]
 # This feature is used for production builds where `devUrl` is unset.
