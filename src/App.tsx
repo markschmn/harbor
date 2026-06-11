@@ -48,9 +48,20 @@ export default function App() {
         >
           <Workspace />
         </div>
-        {view === "transfers" && <TransfersPage />}
-        {view === "keys" && <KeysPage />}
-        {view === "settings" && <SettingsPage />}
+        {view !== "connections" && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {view === "transfers" && <TransfersPage />}
+            {view === "keys" && <KeysPage />}
+            {view === "settings" && <SettingsPage />}
+          </div>
+        )}
       </div>
 
       <HostKeyPromptModal />

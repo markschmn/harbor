@@ -9,9 +9,8 @@ const THEME_KEY = "harbor.theme";
 function initialTheme(): Theme {
   const stored = localStorage.getItem(THEME_KEY);
   if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia?.("(prefers-color-scheme: light)").matches
-    ? "light"
-    : "dark";
+  // Harbor is dark-first; users can switch to light from the nav rail/settings.
+  return "dark";
 }
 
 function applyTheme(theme: Theme) {
