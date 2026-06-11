@@ -1,0 +1,45 @@
+# ---- Rust ----
+/target
+**/target
+Cargo.lock.bak
+*.pdb
+
+# ---- Node / frontend ----
+node_modules
+dist
+dist-ssr
+.vite
+*.local
+
+# ---- Tauri ----
+/src-tauri/target
+/src-tauri/gen
+/src-tauri/Cargo.lock.bak
+
+# ---- Editor / OS ----
+.DS_Store
+Thumbs.db
+.idea
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*~
+
+# ---- Logs ----
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---- Secrets / local config (never commit) ----
+*.pem
+*.key
+!**/test_keys/*.key
+.env
+.env.*
+!.env.example
+
+# ---- Test / coverage artifacts ----
+/coverage
+tarpaulin-report.html
+*.profraw

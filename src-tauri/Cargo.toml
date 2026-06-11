@@ -1,0 +1,43 @@
+[package]
+name = "harbor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Harbor — a modern, secure SSH client and SFTP file manager"
+default-run = "harbor"
+
+[lib]
+name = "harbor_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "harbor"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+harbor-core.workspace = true
+
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-os = "2"
+tauri-plugin-opener = "2"
+
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+secrecy.workspace = true
+time.workspace = true
+futures.workspace = true
+
+[features]
+# This feature is used for production builds where `devUrl` is unset.
+custom-protocol = ["tauri/custom-protocol"]

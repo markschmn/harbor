@@ -1,0 +1,3 @@
+# Treat key fixtures as text so line endings stay stable across platforms.
+crates/harbor-core/tests/fixtures/* text eol=lf
+* text=auto

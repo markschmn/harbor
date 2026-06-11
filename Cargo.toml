@@ -1,0 +1,53 @@
+[workspace]
+resolver = "2"
+members = ["crates/harbor-core", "src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+license = "MIT"
+authors = ["Harbor contributors"]
+repository = "https://github.com/harbor-ssh/harbor"
+description = "A modern, secure cross-platform SSH client and SFTP file manager"
+
+# Shared dependency versions used across the workspace crates.
+[workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+time = { version = "0.3", features = ["serde", "formatting", "parsing", "macros"] }
+zeroize = { version = "1", features = ["derive"] }
+secrecy = { version = "0.10", features = ["serde"] }
+async-trait = "0.1"
+futures = "0.3"
+bytes = "1"
+base64 = "0.22"
+dirs = "6"
+
+# SSH / SFTP — pure-Rust, async, no system OpenSSH/libssh2 dependency.
+russh = "0.61"
+russh-sftp = "2"
+# Pinned to the exact version russh re-exports so the `ssh_key` types unify
+# into a single crate version across the dependency graph.
+ssh-key = { version = "=0.7.0-rc.10", features = [
+    "ed25519",
+    "rsa",
+    "ecdsa",
+    "encryption",
+] }
+
+# Local crate
+harbor-core = { path = "crates/harbor-core" }
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
