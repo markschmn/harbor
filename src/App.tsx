@@ -3,6 +3,7 @@ import { NavRail } from "@/components/NavRail";
 import { Workspace } from "@/components/Workspace";
 import { HostKeyPromptModal } from "@/components/HostKeyPromptModal";
 import { UpdateBanner } from "@/components/UpdateBanner";
+import { LockScreen } from "@/components/LockScreen";
 import { Toasts } from "@/components/ui";
 import { TransfersPage } from "@/pages/TransfersPage";
 import { KeysPage } from "@/pages/KeysPage";
@@ -14,6 +15,7 @@ import { useUpdater } from "@/hooks/useUpdater";
 import { useUi } from "@/stores/ui";
 import { useProfiles } from "@/stores/profiles";
 import { useTransfers } from "@/stores/transfers";
+import { useLock } from "@/stores/lock";
 import type { TransferEvent } from "@/types";
 
 export default function App() {
@@ -24,6 +26,8 @@ export default function App() {
   useUpdater();
 
   useEffect(() => {
+    // Lock the app immediately if a PIN is configured.
+    useLock.getState().init();
     // Initial data load.
     api.appInfo().then(setAppInfo).catch(() => {});
     useProfiles.getState().load();
@@ -72,6 +76,7 @@ export default function App() {
 
       <HostKeyPromptModal />
       <UpdateBanner />
+      <LockScreen />
       <Toasts />
     </div>
   );

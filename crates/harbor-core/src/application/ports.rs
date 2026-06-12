@@ -40,6 +40,8 @@ pub enum SecretRef {
     ProfilePassword(ProfileId),
     /// The passphrase protecting a private key, keyed by its absolute path.
     KeyPassphrase(String),
+    /// The app-lock PIN verifier (a salted hash, never the PIN itself).
+    AppPin,
 }
 
 impl SecretRef {
@@ -48,6 +50,7 @@ impl SecretRef {
         match self {
             SecretRef::ProfilePassword(id) => format!("profile-password:{id}"),
             SecretRef::KeyPassphrase(path) => format!("key-passphrase:{path}"),
+            SecretRef::AppPin => "app-pin".to_string(),
         }
     }
 }

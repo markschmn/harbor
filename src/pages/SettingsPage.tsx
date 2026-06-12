@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   IconAnchor,
   IconDownload,
@@ -7,8 +8,10 @@ import {
   IconTerminal,
 } from "@/components/Icon";
 import { Switch } from "@/components/ui";
+import { RemovePinModal, SetPinModal } from "@/components/PinDialogs";
 import { useUi } from "@/stores/ui";
 import { useUpdates } from "@/stores/updates";
+import { useLock } from "@/stores/lock";
 
 function Kbd({ children }: { children: React.ReactNode }) {
   return (
@@ -31,6 +34,8 @@ export function SettingsPage() {
   const { theme, setTheme, appInfo } = useUi();
   const checking = useUpdates((s) => s.checking);
   const check = useUpdates((s) => s.check);
+  const hasPin = useLock((s) => s.hasPin);
+  const [pinDialog, setPinDialog] = useState<"set" | "change" | "remove" | null>(null);
   const mod = appInfo?.platform === "macos" ? "⌘" : "Ctrl";
 
   const shortcuts: [string, string][] = [
@@ -83,6 +88,39 @@ export function SettingsPage() {
               <IconLock size={14} />
               {appInfo?.keychain_persistent ? "OS keychain" : "Session only"}
             </span>
+          </div>
+        </div>
+
+        <div className="detail-card" style={{ marginTop: 16 }}>
+          <div className="row row--between">
+            <div className="row" style={{ gap: 10 }}>
+              <IconLock size={18} className="muted" />
+              <div>
+                <div style={{ fontWeight: 600 }}>App lock (PIN)</div>
+                <div className="faint" style={{ fontSize: 12 }}>
+                  {hasPin
+                    ? "Harbor asks for your PIN each time it launches."
+                    : "Require a PIN to open Harbor."}
+                </div>
+              </div>
+            </div>
+            {hasPin ? (
+              <div className="row" style={{ gap: 8 }}>
+                <button className="btn btn--sm" onClick={() => setPinDialog("change")}>
+                  Change
+                </button>
+                <button
+                  className="btn btn--sm btn--danger"
+                  onClick={() => setPinDialog("remove")}
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <button className="btn btn--sm btn--primary" onClick={() => setPinDialog("set")}>
+                Set up PIN
+              </button>
+            )}
           </div>
         </div>
 
@@ -146,6 +184,11 @@ export function SettingsPage() {
           </div>
         )}
       </div>
+
+      {(pinDialog === "set" || pinDialog === "change") && (
+        <SetPinModal change={pinDialog === "change"} onClose={() => setPinDialog(null)} />
+      )}
+      {pinDialog === "remove" && <RemovePinModal onClose={() => setPinDialog(null)} />}
     </div>
   );
 }

@@ -198,44 +198,36 @@ function FilePane({
         </button>
       </div>
 
-      {/* Always render this bar so selecting a row never shifts the list
-          (which previously moved the row out from under a double-click). */}
+      {/* The action bar is ALWAYS present with the same buttons (disabled when
+          nothing is selected) so its height never changes — selecting a row
+          can't shift the list and steal a double-click. */}
       <div className="file-pane__selbar">
-        {selected ? (
-          <>
-            {selected.kind !== "directory" && (
-              <button
-                className="btn btn--sm btn--primary"
-                onClick={() => onTransfer(selected)}
-              >
-                <TransferIcon size={15} /> {transferLabel}
-              </button>
-            )}
-            <button className="btn btn--sm" onClick={() => onRename(selected)}>
-              <IconEdit size={14} /> Rename
-            </button>
-            <button className="btn btn--sm btn--danger" onClick={() => onDelete(selected)}>
-              <IconTrash size={14} /> Delete
-            </button>
-            <span className="faint" style={{ marginLeft: "auto", fontSize: 12 }}>
-              {selected.name}
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="faint" style={{ fontSize: 12 }}>
-              {entries.length} item{entries.length === 1 ? "" : "s"}
-            </span>
-            <span
-              className="faint row"
-              style={{ marginLeft: "auto", gap: 6, fontSize: 11 }}
-            >
-              <TransferIcon size={13} />
-              Double-click or drag a file to{" "}
-              {side === "local" ? "upload" : "download"}
-            </span>
-          </>
-        )}
+        <button
+          className="btn btn--sm btn--primary"
+          disabled={!selected || selected.kind === "directory"}
+          onClick={() => selected && onTransfer(selected)}
+        >
+          <TransferIcon size={15} /> {transferLabel}
+        </button>
+        <button
+          className="btn btn--sm"
+          disabled={!selected}
+          onClick={() => selected && onRename(selected)}
+        >
+          <IconEdit size={14} /> Rename
+        </button>
+        <button
+          className="btn btn--sm btn--danger"
+          disabled={!selected}
+          onClick={() => selected && onDelete(selected)}
+        >
+          <IconTrash size={14} /> Delete
+        </button>
+        <span className="faint" style={{ marginLeft: "auto", fontSize: 12 }}>
+          {selected
+            ? selected.name
+            : `${entries.length} item${entries.length === 1 ? "" : "s"} · double-click or drag to ${side === "local" ? "upload" : "download"}`}
+        </span>
       </div>
 
       <div

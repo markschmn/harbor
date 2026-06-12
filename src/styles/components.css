@@ -916,6 +916,64 @@
   text-overflow: ellipsis;
 }
 
+/* ---- Lock screen ---------------------------------------------------------- */
+
+.lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  animation: fade-in var(--transition);
+}
+.lock-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  width: 320px;
+  padding: var(--s-6);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.lock-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-lg);
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #fff;
+  margin-bottom: var(--s-2);
+}
+.lock-title {
+  font-size: 18px;
+  font-weight: 650;
+}
+.lock-pin {
+  text-align: center;
+  letter-spacing: 8px;
+  font-size: 20px;
+  height: 48px;
+  margin-top: var(--s-2);
+}
+.lock-pin.is-error {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-soft);
+}
+.shake {
+  animation: shake 0.4s ease;
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
 /* ---- Misc helpers --------------------------------------------------------- */
 
 .row {

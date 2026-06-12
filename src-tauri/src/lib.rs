@@ -141,6 +141,10 @@ pub fn run() {
             commands::transfers::clear_finished_transfers,
             commands::keys::list_keys,
             commands::keys::inspect_key,
+            commands::security::has_app_pin,
+            commands::security::set_app_pin,
+            commands::security::verify_app_pin,
+            commands::security::clear_app_pin,
         ])
         .run(tauri::generate_context!())
         .expect("error while running the Harbor application");

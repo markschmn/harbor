@@ -108,3 +108,12 @@ export const clearFinishedTransfers = () =>
 export const listKeys = () => invoke<DiscoveredKey[]>("list_keys");
 export const inspectKey = (path: string) =>
   invoke<DiscoveredKey>("inspect_key", { path });
+
+// ---- app lock (PIN) -------------------------------------------------------
+
+export const hasAppPin = () => invoke<boolean>("has_app_pin");
+export const setAppPin = (pin: string) => invoke<void>("set_app_pin", { pin });
+export const verifyAppPin = (pin: string) =>
+  invoke<boolean>("verify_app_pin", { pin });
+export const clearAppPin = (currentPin: string) =>
+  invoke<void>("clear_app_pin", { currentPin });
