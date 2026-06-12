@@ -159,13 +159,8 @@ mod tests {
     async fn factory_always_returns_a_usable_store() {
         let (store, _persistent) = build_secret_store().await;
         let key = SecretRef::KeyPassphrase("/tmp/test".into());
-        // Round-trips regardless of which backend was selected.
-        store
-            .set(&key, SecretString::from("abc"))
-            .await
-            .or_else(|_| Ok::<_, ()>(())) // a real keychain may reject in CI; ignore
-            .ok();
-        // The in-memory fallback must at least not panic on get/delete.
+        // A real keychain may reject in CI; the call must simply not panic.
+        let _ = store.set(&key, SecretString::from("abc")).await;
         let _ = store.get(&key).await;
         let _ = store.delete(&key).await;
     }

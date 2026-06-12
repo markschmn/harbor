@@ -24,9 +24,16 @@ pub const EVENT_TRANSFER: &str = "harbor://transfer-event";
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum TransferEventDto {
-    Added { task: TransferTask },
-    Progress { progress: TransferProgress },
-    StateChanged { id: TransferId, state: TransferState },
+    Added {
+        task: TransferTask,
+    },
+    Progress {
+        progress: TransferProgress,
+    },
+    StateChanged {
+        id: TransferId,
+        state: TransferState,
+    },
 }
 
 impl From<TransferEvent> for TransferEventDto {
@@ -83,8 +90,8 @@ pub fn run() {
                 loop {
                     match rx.recv().await {
                         Ok(event) => {
-                            let _ = transfer_handle
-                                .emit(EVENT_TRANSFER, TransferEventDto::from(event));
+                            let _ =
+                                transfer_handle.emit(EVENT_TRANSFER, TransferEventDto::from(event));
                         }
                         Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
                         Err(_) => break,

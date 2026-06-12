@@ -14,10 +14,11 @@ use serde::{Deserialize, Serialize};
 ///
 /// This is safe to serialise to disk: it contains references to key files and
 /// flags, but never a password or passphrase.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AuthMethod {
     /// Authenticate against a running SSH agent (ssh-agent / Pageant).
+    #[default]
     Agent,
 
     /// Interactive / stored password authentication. The password itself is
@@ -50,14 +51,12 @@ impl AuthMethod {
     pub fn may_need_secret(&self) -> bool {
         matches!(
             self,
-            AuthMethod::Password | AuthMethod::PublicKey { encrypted: true, .. }
+            AuthMethod::Password
+                | AuthMethod::PublicKey {
+                    encrypted: true,
+                    ..
+                }
         )
-    }
-}
-
-impl Default for AuthMethod {
-    fn default() -> Self {
-        AuthMethod::Agent
     }
 }
 

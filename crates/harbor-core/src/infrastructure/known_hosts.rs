@@ -142,9 +142,7 @@ pub fn fingerprint(key: &HostKey) -> Result<String> {
     let openssh = format!("{} {}", key.algorithm, key.key_base64);
     let public = ssh_key::PublicKey::from_openssh(&openssh)
         .map_err(|e| HarborError::Key(format!("invalid host key: {e}")))?;
-    Ok(public
-        .fingerprint(ssh_key::HashAlg::Sha256)
-        .to_string())
+    Ok(public.fingerprint(ssh_key::HashAlg::Sha256).to_string())
 }
 
 /// Compare two host keys by their decoded wire bytes (robust to base64
@@ -295,10 +293,7 @@ impl KnownHostsStore for FileKnownHostsStore {
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
-                let _ = std::fs::set_permissions(
-                    parent,
-                    std::fs::Permissions::from_mode(0o700),
-                );
+                let _ = std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700));
             }
         }
 
@@ -316,10 +311,11 @@ impl KnownHostsStore for FileKnownHostsStore {
             use std::os::unix::fs::PermissionsExt;
             let _ = file.set_permissions(std::fs::Permissions::from_mode(0o600));
         }
-        file.write_all(line.as_bytes()).map_err(|e| HarborError::Io {
-            path: self.path.clone(),
-            source: e,
-        })
+        file.write_all(line.as_bytes())
+            .map_err(|e| HarborError::Io {
+                path: self.path.clone(),
+                source: e,
+            })
     }
 
     async fn forget(&self, host: &str, port: u16) -> Result<()> {
@@ -344,9 +340,7 @@ impl KnownHostsStore for FileKnownHostsStore {
                 }
                 // Drop lines whose (single) entry matches the host.
                 match parse_known_hosts(line).first() {
-                    Some(entry) => {
-                        !host_field_matches(&entry.host_field, entry.hashed, host, port)
-                    }
+                    Some(entry) => !host_field_matches(&entry.host_field, entry.hashed, host, port),
                     None => true,
                 }
             })

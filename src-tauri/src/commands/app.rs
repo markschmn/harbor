@@ -28,11 +28,7 @@ pub fn app_info(state: State<'_, AppState>) -> AppInfo {
 
 /// Remove all trusted host-key entries for a host (the "forget host" action).
 #[tauri::command]
-pub async fn forget_host(
-    state: State<'_, AppState>,
-    host: String,
-    port: u16,
-) -> CommandResult<()> {
+pub async fn forget_host(state: State<'_, AppState>, host: String, port: u16) -> CommandResult<()> {
     state.known_hosts.forget(&host, port).await?;
     Ok(())
 }

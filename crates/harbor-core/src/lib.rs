@@ -31,9 +31,7 @@ pub mod prelude {
     pub use crate::application::ports::{
         KeyDiscovery, KnownHostsStore, ProfileRepository, SecretStore,
     };
-    pub use crate::application::{
-        KeyService, ProfileService, SessionService, TransferService,
-    };
+    pub use crate::application::{KeyService, ProfileService, SessionService, TransferService};
     pub use crate::domain::auth::{AuthMethod, Credential};
     pub use crate::domain::error::{HarborError, Result};
     pub use crate::domain::host_key::{HostKey, HostKeyDecision, KnownHostEntry};

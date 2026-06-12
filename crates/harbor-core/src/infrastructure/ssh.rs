@@ -33,8 +33,8 @@ use tokio::sync::mpsc;
 use tokio::sync::Mutex as AsyncMutex;
 
 use crate::application::ports::{
-    ConnectionParams, HostKeyPrompt, HostKeyPrompter, KnownHostsStore, ShellEvent, ShellHandle,
-    ShellInput, SftpClient, SshSession, SshTransport,
+    ConnectionParams, HostKeyPrompt, HostKeyPrompter, KnownHostsStore, SftpClient, ShellEvent,
+    ShellHandle, ShellInput, SshSession, SshTransport,
 };
 use crate::domain::auth::Credential;
 use crate::domain::error::{HarborError, Result};
@@ -78,24 +78,19 @@ impl SshTransport for RusshTransport {
         // `connect` performs the transport handshake, which invokes
         // `check_server_key`. A rejected host key surfaces as an error here; we
         // translate the recorded decision into a precise, typed error.
-        let mut handle = match client::connect(
-            config,
-            (params.host.as_str(), params.port),
-            handler,
-        )
-        .await
-        {
-            Ok(h) => h,
-            Err(e) => {
-                if let Some(decision) = outcome.lock().unwrap().take() {
-                    return Err(decision_to_error(&params.host, decision));
+        let mut handle =
+            match client::connect(config, (params.host.as_str(), params.port), handler).await {
+                Ok(h) => h,
+                Err(e) => {
+                    if let Some(decision) = outcome.lock().unwrap().take() {
+                        return Err(decision_to_error(&params.host, decision));
+                    }
+                    return Err(HarborError::Ssh(format!(
+                        "could not connect to {}:{}: {e}",
+                        params.host, params.port
+                    )));
                 }
-                return Err(HarborError::Ssh(format!(
-                    "could not connect to {}:{}: {e}",
-                    params.host, params.port
-                )));
-            }
-        };
+            };
 
         authenticate(&mut handle, &params).await?;
 
@@ -261,9 +256,7 @@ fn load_private_key(path: &Path, passphrase: Option<&str>) -> Result<russh::keys
         Ok(key) => Ok(key),
         Err(e) => {
             let lower = e.to_string().to_lowercase();
-            if passphrase.is_none()
-                && (lower.contains("encrypt") || lower.contains("passphrase"))
-            {
+            if passphrase.is_none() && (lower.contains("encrypt") || lower.contains("passphrase")) {
                 Err(HarborError::PassphraseRequired)
             } else if lower.contains("crypt")
                 || lower.contains("mac")
@@ -284,10 +277,7 @@ fn load_private_key(path: &Path, passphrase: Option<&str>) -> Result<russh::keys
 }
 
 /// Authenticate by delegating signing to a running SSH agent.
-async fn authenticate_with_agent(
-    handle: &mut Handle<ClientHandler>,
-    username: &str,
-) -> Result<()> {
+async fn authenticate_with_agent(handle: &mut Handle<ClientHandler>, username: &str) -> Result<()> {
     let mut agent = AgentClient::connect_env().await.map_err(|e| {
         HarborError::Authentication(format!("could not connect to an SSH agent: {e}"))
     })?;
@@ -305,7 +295,10 @@ async fn authenticate_with_agent(
 
     for identity in identities {
         let public = identity.public_key().into_owned();
-        let hash_alg = public.algorithm().is_rsa().then_some(ssh_key::HashAlg::Sha256);
+        let hash_alg = public
+            .algorithm()
+            .is_rsa()
+            .then_some(ssh_key::HashAlg::Sha256);
         if let Ok(res) = handle
             .authenticate_publickey_with(username, public, hash_alg, &mut agent)
             .await
@@ -331,7 +324,9 @@ struct RusshSession {
 
 impl std::fmt::Debug for RusshSession {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RusshSession").field("id", &self.id).finish()
+        f.debug_struct("RusshSession")
+            .field("id", &self.id)
+            .finish()
     }
 }
 

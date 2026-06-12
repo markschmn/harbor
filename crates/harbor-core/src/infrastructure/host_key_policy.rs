@@ -10,7 +10,7 @@
 
 use async_trait::async_trait;
 
-use crate::application::ports::{HostKeyPrompter, HostKeyPrompt};
+use crate::application::ports::{HostKeyPrompt, HostKeyPrompter};
 use crate::domain::host_key::TofuResolution;
 
 /// Accept and persist unknown host keys (equivalent to OpenSSH

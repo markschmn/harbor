@@ -11,7 +11,7 @@ use crate::domain::profile::ProfileId;
 use crate::domain::session::{PtySize, SessionId, SessionInfo, SessionStatus};
 
 use super::ports::{
-    ConnectionParams, HostKeyPrompter, KnownHostsStore, ShellHandle, SftpClient, SshSession,
+    ConnectionParams, HostKeyPrompter, KnownHostsStore, SftpClient, ShellHandle, SshSession,
     SshTransport,
 };
 use super::transfer_service::SftpProvider;
@@ -21,7 +21,10 @@ use async_trait::async_trait;
 /// layer forwards these to the UI.
 #[derive(Debug, Clone)]
 pub enum SessionEvent {
-    StatusChanged { id: SessionId, status: SessionStatus },
+    StatusChanged {
+        id: SessionId,
+        status: SessionStatus,
+    },
 }
 
 /// Internal registry entry pairing a live transport with its metadata.

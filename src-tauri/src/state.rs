@@ -85,10 +85,7 @@ impl HostKeyPrompter for EventPrompter {
     async fn resolve_unknown(&self, prompt: HostKeyPrompt) -> TofuResolution {
         let request_id = Uuid::new_v4().to_string();
         let (tx, rx) = oneshot::channel();
-        self.pending
-            .lock()
-            .await
-            .insert(request_id.clone(), tx);
+        self.pending.lock().await.insert(request_id.clone(), tx);
 
         let payload = HostKeyPromptPayload {
             request_id: request_id.clone(),
@@ -156,7 +153,7 @@ impl AppState {
             Arc::clone(&prompter) as Arc<dyn HostKeyPrompter>,
         ));
         let transfers = Arc::new(TransferService::new(
-            Arc::clone(&sessions) as Arc<dyn harbor_core::application::SftpProvider>,
+            Arc::clone(&sessions) as Arc<dyn harbor_core::application::SftpProvider>
         ));
         let keys = Arc::new(KeyService::new(key_discovery));
 

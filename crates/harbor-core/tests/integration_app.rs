@@ -78,7 +78,11 @@ async fn profile_password_lifecycle() {
         .await
         .unwrap();
     assert_eq!(
-        svc.get_password(p.id).await.unwrap().unwrap().expose_secret(),
+        svc.get_password(p.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .expose_secret(),
         "s3cret"
     );
 

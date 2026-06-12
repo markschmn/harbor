@@ -58,7 +58,10 @@ impl TransferState {
     }
 
     pub fn is_retryable(&self) -> bool {
-        matches!(self, TransferState::Failed { .. } | TransferState::Cancelled)
+        matches!(
+            self,
+            TransferState::Failed { .. } | TransferState::Cancelled
+        )
     }
 }
 

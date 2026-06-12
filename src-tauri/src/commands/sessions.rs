@@ -5,7 +5,9 @@ use secrecy::SecretString;
 use serde::Deserialize;
 use tauri::{AppHandle, Emitter, State};
 
-use harbor_core::application::ports::{ConnectionParams, SecretRef, ShellEvent, ShellHandle, ShellInput};
+use harbor_core::application::ports::{
+    ConnectionParams, SecretRef, ShellEvent, ShellHandle, ShellInput,
+};
 use harbor_core::domain::auth::{AuthMethod, Credential};
 use harbor_core::domain::host_key::TofuResolution;
 use harbor_core::domain::profile::{ProfileId, ServerProfile};
@@ -140,9 +142,7 @@ pub async fn open_shell(
         ..Default::default()
     };
     let ShellHandle {
-        input,
-        mut output,
-        ..
+        input, mut output, ..
     } = state.sessions.open_shell(session_id, size).await?;
 
     state.shells.lock().await.insert(session_id, input);

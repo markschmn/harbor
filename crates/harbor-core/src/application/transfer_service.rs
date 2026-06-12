@@ -98,7 +98,7 @@ impl TransferService {
     /// All transfers, newest first (acts as the transfer history too).
     pub async fn list(&self) -> Vec<TransferTask> {
         let mut v: Vec<_> = self.tasks.lock().await.values().cloned().collect();
-        v.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        v.sort_by_key(|t| std::cmp::Reverse(t.created_at));
         v
     }
 

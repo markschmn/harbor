@@ -13,9 +13,6 @@ pub async fn list_keys(state: State<'_, AppState>) -> CommandResult<Vec<Discover
 }
 
 #[tauri::command]
-pub async fn inspect_key(
-    state: State<'_, AppState>,
-    path: String,
-) -> CommandResult<DiscoveredKey> {
+pub async fn inspect_key(state: State<'_, AppState>, path: String) -> CommandResult<DiscoveredKey> {
     Ok(state.keys.inspect(path).await?)
 }

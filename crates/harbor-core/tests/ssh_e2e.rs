@@ -56,7 +56,15 @@ fn free_port() -> u16 {
 
 fn keygen(path: &std::path::Path) -> bool {
     Command::new("ssh-keygen")
-        .args(["-t", "ed25519", "-f", path.to_str().unwrap(), "-N", "", "-q"])
+        .args([
+            "-t",
+            "ed25519",
+            "-f",
+            path.to_str().unwrap(),
+            "-N",
+            "",
+            "-q",
+        ])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()
@@ -159,10 +167,7 @@ fn service(known: Arc<dyn KnownHostsStore>) -> SessionService {
     SessionService::new(Arc::new(RusshTransport), known, Arc::new(StrictPolicy))
 }
 
-async fn read_until(
-    output: &mut tokio::sync::mpsc::Receiver<ShellEvent>,
-    marker: &str,
-) -> String {
+async fn read_until(output: &mut tokio::sync::mpsc::Receiver<ShellEvent>, marker: &str) -> String {
     let mut buf = String::new();
     for _ in 0..40 {
         match tokio::time::timeout(Duration::from_millis(500), output.recv()).await {
@@ -238,7 +243,10 @@ async fn end_to_end_shell_and_sftp() {
         .await
         .unwrap();
     assert_eq!(uploaded, content.len() as u64);
-    assert!(progress_calls.load(Ordering::SeqCst) > 0, "no progress reported");
+    assert!(
+        progress_calls.load(Ordering::SeqCst) > 0,
+        "no progress reported"
+    );
     // Same machine: the uploaded file is byte-identical on disk.
     assert_eq!(std::fs::read(&remote).unwrap(), content);
 

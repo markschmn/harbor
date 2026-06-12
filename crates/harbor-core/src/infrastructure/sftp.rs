@@ -84,11 +84,12 @@ fn base_name(path: &str) -> String {
         .to_string()
 }
 
-fn metadata_to_entry(name: String, path: String, meta: &russh_sftp::client::fs::Metadata) -> DirEntry {
-    let modified = meta
-        .modified()
-        .ok()
-        .map(OffsetDateTime::from);
+fn metadata_to_entry(
+    name: String,
+    path: String,
+    meta: &russh_sftp::client::fs::Metadata,
+) -> DirEntry {
+    let modified = meta.modified().ok().map(OffsetDateTime::from);
     DirEntry {
         name,
         path,
@@ -188,7 +189,9 @@ impl SftpClient for RusshSftpClient {
             if n == 0 {
                 break;
             }
-            out.write_all(&buf[..n]).await.map_err(|e| io_err(local, e))?;
+            out.write_all(&buf[..n])
+                .await
+                .map_err(|e| io_err(local, e))?;
             transferred += n as u64;
             progress(transferred, total.max(transferred));
         }

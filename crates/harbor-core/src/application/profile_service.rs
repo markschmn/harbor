@@ -42,10 +42,7 @@ impl ProfileService {
     /// Profiles matching a free-text query (name/host/username/tags).
     pub async fn search(&self, query: &str) -> Result<Vec<ServerProfile>> {
         let all = self.list().await?;
-        Ok(all
-            .into_iter()
-            .filter(|p| p.matches_query(query))
-            .collect())
+        Ok(all.into_iter().filter(|p| p.matches_query(query)).collect())
     }
 
     pub async fn get(&self, id: ProfileId) -> Result<ServerProfile> {
@@ -70,10 +67,7 @@ impl ProfileService {
     /// Delete a profile and any secret associated with it.
     pub async fn delete(&self, id: ProfileId) -> Result<()> {
         // Best-effort secret cleanup; a missing secret is not an error.
-        let _ = self
-            .secrets
-            .delete(&SecretRef::ProfilePassword(id))
-            .await;
+        let _ = self.secrets.delete(&SecretRef::ProfilePassword(id)).await;
         self.repo.delete(id).await
     }
 
@@ -107,9 +101,7 @@ impl ProfileService {
 
     /// Delete only the stored password, keeping the profile.
     pub async fn clear_password(&self, id: ProfileId) -> Result<()> {
-        self.secrets
-            .delete(&SecretRef::ProfilePassword(id))
-            .await
+        self.secrets.delete(&SecretRef::ProfilePassword(id)).await
     }
 
     /// Look up a profile by id, returning a friendly error if missing.
@@ -189,7 +181,11 @@ mod tests {
         assert!(svc.has_password(p.id).await.unwrap());
         use secrecy::ExposeSecret;
         assert_eq!(
-            svc.get_password(p.id).await.unwrap().unwrap().expose_secret(),
+            svc.get_password(p.id)
+                .await
+                .unwrap()
+                .unwrap()
+                .expose_secret(),
             "s3cret"
         );
 

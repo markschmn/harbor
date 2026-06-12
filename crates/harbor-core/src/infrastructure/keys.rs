@@ -188,7 +188,11 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         write_pair(dir.path(), "id_ed25519", ED25519_PRIV, ED25519_PUB);
         write_pair(dir.path(), "id_secure", ED25519_ENC_PRIV, ED25519_ENC_PUB);
-        std::fs::write(dir.path().join("known_hosts"), "example.com ssh-ed25519 AAAA").unwrap();
+        std::fs::write(
+            dir.path().join("known_hosts"),
+            "example.com ssh-ed25519 AAAA",
+        )
+        .unwrap();
         std::fs::write(dir.path().join("config"), "Host *\n").unwrap();
         std::fs::write(dir.path().join("random.txt"), "not a key").unwrap();
 
