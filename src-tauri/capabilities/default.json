@@ -9,6 +9,8 @@
     "dialog:default",
     "opener:default",
     "os:default",
-    "fs:default"
+    "fs:default",
+    "updater:default",
+    "process:allow-restart"
   ]
 }

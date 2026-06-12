@@ -57,3 +57,6 @@ keyring = { version = "3.6", default-features = false, features = ["windows-nati
 [dev-dependencies]
 tempfile = "3"
 tokio = { version = "1", features = ["full", "test-util"] }
+# Deterministic CSPRNG (the same crate ssh-key uses) to generate throwaway key
+# pairs at test time — so no private keys are ever committed to the repo.
+chacha20 = { version = "0.10", features = ["rng"] }

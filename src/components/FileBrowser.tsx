@@ -198,24 +198,45 @@ function FilePane({
         </button>
       </div>
 
-      {selected && (
-        <div className="file-pane__selbar">
-          {selected.kind !== "directory" && (
-            <button className="btn btn--sm btn--primary" onClick={() => onTransfer(selected)}>
-              <TransferIcon size={15} /> {transferLabel}
+      {/* Always render this bar so selecting a row never shifts the list
+          (which previously moved the row out from under a double-click). */}
+      <div className="file-pane__selbar">
+        {selected ? (
+          <>
+            {selected.kind !== "directory" && (
+              <button
+                className="btn btn--sm btn--primary"
+                onClick={() => onTransfer(selected)}
+              >
+                <TransferIcon size={15} /> {transferLabel}
+              </button>
+            )}
+            <button className="btn btn--sm" onClick={() => onRename(selected)}>
+              <IconEdit size={14} /> Rename
             </button>
-          )}
-          <button className="btn btn--sm" onClick={() => onRename(selected)}>
-            <IconEdit size={14} /> Rename
-          </button>
-          <button className="btn btn--sm btn--danger" onClick={() => onDelete(selected)}>
-            <IconTrash size={14} /> Delete
-          </button>
-          <span className="faint" style={{ marginLeft: "auto", fontSize: 12 }}>
-            {selected.name}
-          </span>
-        </div>
-      )}
+            <button className="btn btn--sm btn--danger" onClick={() => onDelete(selected)}>
+              <IconTrash size={14} /> Delete
+            </button>
+            <span className="faint" style={{ marginLeft: "auto", fontSize: 12 }}>
+              {selected.name}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="faint" style={{ fontSize: 12 }}>
+              {entries.length} item{entries.length === 1 ? "" : "s"}
+            </span>
+            <span
+              className="faint row"
+              style={{ marginLeft: "auto", gap: 6, fontSize: 11 }}
+            >
+              <TransferIcon size={13} />
+              Double-click or drag a file to{" "}
+              {side === "local" ? "upload" : "download"}
+            </span>
+          </>
+        )}
+      </div>
 
       <div
         className={`file-list ${dragOver ? "is-dragover" : ""}`}
@@ -272,11 +293,6 @@ function FilePane({
             )}
           </>
         )}
-      </div>
-
-      <div className="file-pane__hint">
-        <TransferIcon size={13} />
-        Double-click or drag a file to {side === "local" ? "upload" : "download"}
       </div>
     </div>
   );

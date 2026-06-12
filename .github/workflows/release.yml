@@ -1,16 +1,14 @@
 name: Build & Release
 
-# Produces native installers for Windows, macOS and Linux.
-# - Push a tag like `v0.1.0` to cut a GitHub Release with the artifacts attached.
-# - Or run manually (workflow_dispatch) to get the bundles as build artifacts.
+# Builds signed installers and publishes a GitHub Release. The release carries
+# `latest.json`, which the in-app auto-updater points at, so installed copies
+# can update themselves. Trigger by pushing a tag like `v0.1.2`.
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
 
-# Required so the build job can create/update the GitHub Release and upload
-# the installers (otherwise: "Resource not accessible by integration").
 permissions:
   contents: write
 
@@ -20,12 +18,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: ubuntu-22.04 # Linux: .deb, .rpm, .AppImage
-          - platform: windows-latest # Windows: .msi (WiX), .exe (NSIS)
-          - platform: macos-latest # macOS (Apple Silicon): .dmg, .app
-            target: aarch64-apple-darwin
-          - platform: macos-13 # macOS (Intel): .dmg, .app
-            target: x86_64-apple-darwin
+          - platform: ubuntu-22.04 # Linux: .AppImage, .deb, .rpm
+          - platform: windows-latest # Windows: .msi, .exe
 
     runs-on: ${{ matrix.platform }}
 
@@ -42,12 +36,10 @@ jobs:
             build-essential pkg-config patchelf
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target || '' }}
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "./src-tauri -> target"
+          workspaces: ". -> target"
 
       - uses: actions/setup-node@v4
         with:
@@ -56,28 +48,18 @@ jobs:
 
       - run: npm ci
 
-      - name: Build the app
+      - name: Build, sign and publish
         uses: tauri-apps/tauri-action@v0
-        with:
-          args: ${{ matrix.target && format('--target {0}', matrix.target) || '' }}
-          # On a tag push, create/update a GitHub Release with the bundles.
-          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-          releaseName: ${{ github.ref_type == 'tag' && format('Harbor {0}', github.ref_name) || '' }}
-          releaseDraft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # When run manually (no tag), surface the bundles as downloadable artifacts.
-      - name: Upload bundles as artifacts
-        if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
+          # Signs the updater artifacts. Stored only as encrypted Actions
+          # secrets — never in the repository.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          name: harbor-${{ matrix.platform }}${{ matrix.target && format('-{0}', matrix.target) || '' }}
-          path: |
-            src-tauri/target/**/release/bundle/**/*.AppImage
-            src-tauri/target/**/release/bundle/**/*.deb
-            src-tauri/target/**/release/bundle/**/*.rpm
-            src-tauri/target/**/release/bundle/**/*.dmg
-            src-tauri/target/**/release/bundle/**/*.msi
-            src-tauri/target/**/release/bundle/**/*-setup.exe
-          if-no-files-found: ignore
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || 'app-v__VERSION__' }}
+          releaseName: Harbor ${{ github.ref_name }}
+          releaseBody: "See the assets below to download and install."
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true

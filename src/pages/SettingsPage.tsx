@@ -1,9 +1,42 @@
-import { IconAnchor, IconLock, IconShield } from "@/components/Icon";
+import {
+  IconAnchor,
+  IconDownload,
+  IconLock,
+  IconRefresh,
+  IconShield,
+  IconTerminal,
+} from "@/components/Icon";
 import { Switch } from "@/components/ui";
 import { useUi } from "@/stores/ui";
+import { useUpdates } from "@/stores/updates";
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      className="mono"
+      style={{
+        padding: "2px 7px",
+        borderRadius: 6,
+        background: "var(--bg-elev-2)",
+        border: "1px solid var(--border)",
+        fontSize: 11,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
 
 export function SettingsPage() {
   const { theme, setTheme, appInfo } = useUi();
+  const checking = useUpdates((s) => s.checking);
+  const check = useUpdates((s) => s.check);
+  const mod = appInfo?.platform === "macos" ? "⌘" : "Ctrl";
+
+  const shortcuts: [string, string][] = [
+    [`${mod} + 1 … 4`, "Switch between Connections / Transfers / Keys / Settings"],
+    [`${mod} + W`, "Close the active session tab"],
+  ];
 
   return (
     <div className="panel">
@@ -51,6 +84,42 @@ export function SettingsPage() {
               {appInfo?.keychain_persistent ? "OS keychain" : "Session only"}
             </span>
           </div>
+        </div>
+
+        <div className="detail-card" style={{ marginTop: 16 }}>
+          <div className="row row--between" style={{ marginBottom: 4 }}>
+            <div className="row" style={{ gap: 10 }}>
+              <IconDownload size={18} className="muted" />
+              <div style={{ fontWeight: 600 }}>Software update</div>
+            </div>
+            <button
+              className="btn btn--sm"
+              onClick={() => check(false)}
+              disabled={checking}
+            >
+              {checking ? <span className="spinner" /> : <IconRefresh size={14} />}
+              {checking ? "Checking…" : "Check for updates"}
+            </button>
+          </div>
+          <div className="faint" style={{ fontSize: 12 }}>
+            Harbor checks for updates automatically on launch and installs them
+            with one click. Currently on v{appInfo?.version ?? "—"}.
+          </div>
+        </div>
+
+        <div className="detail-card" style={{ marginTop: 16 }}>
+          <div className="row" style={{ gap: 10, marginBottom: 12 }}>
+            <IconTerminal size={18} className="muted" />
+            <div style={{ fontWeight: 600 }}>Keyboard shortcuts</div>
+          </div>
+          {shortcuts.map(([keys, desc]) => (
+            <div className="detail-row" key={keys}>
+              <span className="detail-row__key">{desc}</span>
+              <span className="detail-row__val">
+                <Kbd>{keys}</Kbd>
+              </span>
+            </div>
+          ))}
         </div>
 
         <div className="detail-card" style={{ marginTop: 16 }}>

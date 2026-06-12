@@ -2,12 +2,15 @@ import { useEffect } from "react";
 import { NavRail } from "@/components/NavRail";
 import { Workspace } from "@/components/Workspace";
 import { HostKeyPromptModal } from "@/components/HostKeyPromptModal";
+import { UpdateBanner } from "@/components/UpdateBanner";
 import { Toasts } from "@/components/ui";
 import { TransfersPage } from "@/pages/TransfersPage";
 import { KeysPage } from "@/pages/KeysPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import * as api from "@/services/api";
 import { EVENTS, on } from "@/services/events";
+import { useGlobalShortcuts } from "@/hooks/useShortcuts";
+import { useUpdater } from "@/hooks/useUpdater";
 import { useUi } from "@/stores/ui";
 import { useProfiles } from "@/stores/profiles";
 import { useTransfers } from "@/stores/transfers";
@@ -16,6 +19,9 @@ import type { TransferEvent } from "@/types";
 export default function App() {
   const view = useUi((s) => s.view);
   const setAppInfo = useUi((s) => s.setAppInfo);
+
+  useGlobalShortcuts();
+  useUpdater();
 
   useEffect(() => {
     // Initial data load.
@@ -65,6 +71,7 @@ export default function App() {
       </div>
 
       <HostKeyPromptModal />
+      <UpdateBanner />
       <Toasts />
     </div>
   );

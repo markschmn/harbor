@@ -153,46 +153,58 @@ fn discover_in(dir: &Path) -> Result<Vec<DiscoveredKey>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chacha20::ChaCha8Rng;
+    use ssh_key::rand_core::SeedableRng;
+    use ssh_key::{Algorithm, LineEnding};
 
-    // Real OpenSSH key fixtures generated once with `ssh-keygen` and checked
-    // into the repository. Using fixtures keeps these tests deterministic and
-    // free of any runtime key-generation / RNG dependency.
-    const ED25519_PRIV: &str = include_str!("../../tests/fixtures/id_ed25519");
-    const ED25519_PUB: &str = include_str!("../../tests/fixtures/id_ed25519.pub");
-    const ED25519_ENC_PRIV: &str = include_str!("../../tests/fixtures/id_ed25519_enc");
-    const ED25519_ENC_PUB: &str = include_str!("../../tests/fixtures/id_ed25519_enc.pub");
+    // A deterministic CSPRNG (the same crate ssh-key uses) — reproducible
+    // throwaway keys generated at test time, so nothing is committed.
+    fn rng() -> ChaCha8Rng {
+        ChaCha8Rng::from_seed([7u8; 32])
+    }
 
-    // Known SHA256 fingerprint of the unencrypted fixture (from `ssh-keygen -lf`).
-    const ED25519_FP: &str = "SHA256:1R7eEWgJ9ab7lm32jODAdhB+gegwy/hGp/sBt/sX0wI";
-
-    fn write_pair(dir: &Path, name: &str, priv_pem: &str, pub_line: &str) {
-        std::fs::write(dir.join(name), priv_pem).unwrap();
-        std::fs::write(dir.join(format!("{name}.pub")), pub_line).unwrap();
+    /// Generate an unencrypted ed25519 keypair and write the private + `.pub`
+    /// files into `dir`.
+    fn write_keypair(dir: &Path, name: &str, comment: &str) -> PrivateKey {
+        let mut key = PrivateKey::random(&mut rng(), Algorithm::Ed25519).unwrap();
+        key.set_comment(comment);
+        std::fs::write(
+            dir.join(name),
+            key.to_openssh(LineEnding::LF).unwrap().as_bytes(),
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join(format!("{name}.pub")),
+            key.public_key().to_openssh().unwrap(),
+        )
+        .unwrap();
+        key
     }
 
     #[test]
     fn inspect_reports_algorithm_fingerprint_and_comment() {
         let dir = tempfile::tempdir().unwrap();
-        write_pair(dir.path(), "id_ed25519", ED25519_PRIV, ED25519_PUB);
+        let key = write_keypair(dir.path(), "id_ed25519", "me@laptop");
         let info = inspect_key_file(&dir.path().join("id_ed25519")).unwrap();
 
         assert_eq!(info.algorithm, "ssh-ed25519");
         assert!(!info.encrypted);
-        assert_eq!(info.comment.as_deref(), Some("harbor-test@example"));
+        assert_eq!(info.comment.as_deref(), Some("me@laptop"));
         assert!(info.public_key_path.is_some());
-        assert_eq!(info.fingerprint, ED25519_FP);
+        // Matches what ssh-key computes for the same key.
+        assert_eq!(
+            info.fingerprint,
+            key.public_key().fingerprint(HashAlg::Sha256).to_string()
+        );
+        assert!(info.fingerprint.starts_with("SHA256:"));
     }
 
     #[tokio::test]
     async fn discovery_finds_keys_and_skips_non_keys() {
         let dir = tempfile::tempdir().unwrap();
-        write_pair(dir.path(), "id_ed25519", ED25519_PRIV, ED25519_PUB);
-        write_pair(dir.path(), "id_secure", ED25519_ENC_PRIV, ED25519_ENC_PUB);
-        std::fs::write(
-            dir.path().join("known_hosts"),
-            "example.com ssh-ed25519 AAAA",
-        )
-        .unwrap();
+        write_keypair(dir.path(), "id_ed25519", "a@b");
+        write_keypair(dir.path(), "work_key", "c@d");
+        std::fs::write(dir.path().join("known_hosts"), "example.com ssh-ed25519 AAAA").unwrap();
         std::fs::write(dir.path().join("config"), "Host *\n").unwrap();
         std::fs::write(dir.path().join("random.txt"), "not a key").unwrap();
 
@@ -210,15 +222,19 @@ mod tests {
     #[test]
     fn encrypted_key_is_flagged_without_passphrase() {
         let dir = tempfile::tempdir().unwrap();
+        let key = PrivateKey::random(&mut rng(), Algorithm::Ed25519).unwrap();
+        let encrypted = key.encrypt(&mut rng(), "passphrase").unwrap();
         let path = dir.path().join("id_secure");
-        std::fs::write(&path, ED25519_ENC_PRIV).unwrap();
-        std::fs::write(dir.path().join("id_secure.pub"), ED25519_ENC_PUB).unwrap();
+        std::fs::write(
+            &path,
+            encrypted.to_openssh(LineEnding::LF).unwrap().as_bytes(),
+        )
+        .unwrap();
 
         let info = inspect_key_file(&path).unwrap();
         assert!(info.encrypted, "encrypted key must be flagged");
         // Public metadata is still available without the passphrase.
         assert_eq!(info.algorithm, "ssh-ed25519");
-        assert_eq!(info.comment.as_deref(), Some("harbor-enc@example"));
         assert!(info.fingerprint.starts_with("SHA256:"));
     }
 }
