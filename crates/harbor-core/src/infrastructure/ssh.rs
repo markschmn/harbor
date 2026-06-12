@@ -277,11 +277,45 @@ fn load_private_key(path: &Path, passphrase: Option<&str>) -> Result<russh::keys
 }
 
 /// Authenticate by delegating signing to a running SSH agent.
+///
+/// The agent connection differs by platform — a Unix socket (`SSH_AUTH_SOCK`)
+/// on Unix, the Windows OpenSSH named pipe or Pageant on Windows — but the
+/// identity-iteration logic is identical, so it lives in the generic
+/// [`agent_authenticate`] helper.
+#[cfg(unix)]
 async fn authenticate_with_agent(handle: &mut Handle<ClientHandler>, username: &str) -> Result<()> {
     let mut agent = AgentClient::connect_env().await.map_err(|e| {
         HarborError::Authentication(format!("could not connect to an SSH agent: {e}"))
     })?;
+    agent_authenticate(handle, username, &mut agent).await
+}
 
+#[cfg(windows)]
+async fn authenticate_with_agent(handle: &mut Handle<ClientHandler>, username: &str) -> Result<()> {
+    // Prefer the Windows OpenSSH agent (named pipe); fall back to Pageant.
+    if let Ok(mut agent) = AgentClient::connect_named_pipe(r"\\.\pipe\openssh-ssh-agent").await {
+        return agent_authenticate(handle, username, &mut agent).await;
+    }
+    let mut agent = AgentClient::connect_pageant().await.map_err(|e| {
+        HarborError::Authentication(format!(
+            "could not connect to an SSH agent (OpenSSH named pipe or Pageant): {e}"
+        ))
+    })?;
+    agent_authenticate(handle, username, &mut agent).await
+}
+
+/// Iterate the agent's identities and try each against the server.
+///
+/// Generic over the agent's stream type so it serves every platform's concrete
+/// agent client. The bound matches russh's `Signer` impl for `AgentClient`.
+async fn agent_authenticate<R>(
+    handle: &mut Handle<ClientHandler>,
+    username: &str,
+    agent: &mut AgentClient<R>,
+) -> Result<()>
+where
+    R: russh::keys::agent::client::AgentStream + Unpin + Send,
+{
     let identities = agent
         .request_identities()
         .await
@@ -300,7 +334,7 @@ async fn authenticate_with_agent(handle: &mut Handle<ClientHandler>, username: &
             .is_rsa()
             .then_some(ssh_key::HashAlg::Sha256);
         if let Ok(res) = handle
-            .authenticate_publickey_with(username, public, hash_alg, &mut agent)
+            .authenticate_publickey_with(username, public, hash_alg, agent)
             .await
         {
             if res.success() {
