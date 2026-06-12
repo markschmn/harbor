@@ -494,8 +494,9 @@
 .terminal-host {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   background: var(--terminal-bg);
-  padding: var(--s-3);
+  padding: 6px 8px;
   overflow: hidden;
 }
 .terminal-host .xterm {

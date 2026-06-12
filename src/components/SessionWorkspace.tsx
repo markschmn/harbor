@@ -46,11 +46,15 @@ export function SessionWorkspace({
         <span className="badge badge--accent">{session.info.title}</span>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
+      <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: "flex" }}>
         <div
           style={{
             flex: 1,
+            // BOTH min-* must be 0: otherwise the flex item's min size is its
+            // content size, and xterm's fit() then grows it unbounded — a
+            // resize-storm feedback loop that breaks full-screen apps.
             minHeight: 0,
+            minWidth: 0,
             display: panel === "terminal" ? "flex" : "none",
             flexDirection: "column",
           }}
@@ -61,6 +65,7 @@ export function SessionWorkspace({
           style={{
             flex: 1,
             minHeight: 0,
+            minWidth: 0,
             display: panel === "files" ? "flex" : "none",
             flexDirection: "column",
           }}

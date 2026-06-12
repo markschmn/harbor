@@ -103,8 +103,17 @@ export function TerminalPane({
       }
     }).then((fn) => unlisteners.push(fn));
 
-    // Keep the PTY sized to the element on any layout change.
-    const ro = new ResizeObserver(() => safeFit());
+    // Keep the PTY sized to the element on any layout change. Coalesce rapid
+    // observer fires into one fit per frame so a transient layout can never
+    // turn into a resize storm.
+    let rafId = 0;
+    const ro = new ResizeObserver(() => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        safeFit();
+      });
+    });
     ro.observe(host);
 
     // Open the shell only once the terminal has a real, font-measured size,
@@ -140,6 +149,7 @@ export function TerminalPane({
 
     return () => {
       disposed = true;
+      if (rafId) cancelAnimationFrame(rafId);
       dataSub.dispose();
       resizeSub.dispose();
       ro.disconnect();
