@@ -57,7 +57,7 @@ export function TerminalPane({
       fontFamily:
         '"JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace',
       fontSize: 13,
-      lineHeight: 1.2,
+      lineHeight: 1.0,
       cursorBlink: true,
       scrollback: 8000,
       theme: TERMINAL_THEME,
@@ -67,15 +67,24 @@ export function TerminalPane({
     term.loadAddon(fit);
     term.loadAddon(new WebLinksAddon());
     term.open(host);
-    fit.fit();
     termRef.current = term;
     fitRef.current = fit;
+
+    const safeFit = () => {
+      if (host.clientHeight > 1 && host.clientWidth > 1) {
+        try {
+          fit.fit();
+        } catch {
+          /* ignore */
+        }
+      }
+    };
 
     // Forward keystrokes to the remote shell.
     const dataSub = term.onData((data) => {
       api.sendInput(sessionId, data).catch(() => {});
     });
-    // Inform the backend of terminal size changes.
+    // Inform the backend of terminal size changes (incl. the initial fit).
     const resizeSub = term.onResize(({ cols, rows }) => {
       api.resizeTerminal(sessionId, cols, rows).catch(() => {});
     });
@@ -94,22 +103,43 @@ export function TerminalPane({
       }
     }).then((fn) => unlisteners.push(fn));
 
-    // Keep the PTY sized to the element.
-    const ro = new ResizeObserver(() => {
-      try {
-        fit.fit();
-      } catch {
-        /* element not visible */
-      }
-    });
+    // Keep the PTY sized to the element on any layout change.
+    const ro = new ResizeObserver(() => safeFit());
     ro.observe(host);
 
-    // Open the interactive shell once the terminal has a real size.
-    api.openShell(sessionId, term.cols, term.rows).catch((e) => {
-      term.write(`\r\n\x1b[31mFailed to open shell: ${errorMessage(e)}\x1b[0m\r\n`);
-    });
+    // Open the shell only once the terminal has a real, font-measured size,
+    // otherwise full-screen apps (nano, vim, htop) receive wrong dimensions
+    // and the bottom row gets clipped. Wait for fonts + a non-zero layout.
+    let disposed = false;
+    (async () => {
+      try {
+        await document.fonts.ready;
+      } catch {
+        /* no web fonts to wait on */
+      }
+      for (let i = 0; i < 60 && !disposed; i++) {
+        if (host.clientHeight > 1 && host.clientWidth > 1) break;
+        await new Promise((r) => requestAnimationFrame(() => r(undefined)));
+      }
+      if (disposed) return;
+
+      safeFit();
+      if (term.rows < 2 || term.cols < 2) {
+        term.resize(Math.max(term.cols, 80), Math.max(term.rows, 24));
+      }
+      try {
+        await api.openShell(sessionId, term.cols, term.rows);
+      } catch (e) {
+        term.write(`\r\n\x1b[31mFailed to open shell: ${errorMessage(e)}\x1b[0m\r\n`);
+        return;
+      }
+      // Correct any late layout/sub-pixel changes after the shell is up.
+      window.setTimeout(() => !disposed && safeFit(), 120);
+      window.setTimeout(() => !disposed && safeFit(), 400);
+    })();
 
     return () => {
+      disposed = true;
       dataSub.dispose();
       resizeSub.dispose();
       ro.disconnect();
@@ -124,13 +154,14 @@ export function TerminalPane({
   useEffect(() => {
     if (!active) return;
     const id = window.setTimeout(() => {
+      const host = hostRef.current;
       try {
-        fitRef.current?.fit();
+        if (host && host.clientHeight > 1) fitRef.current?.fit();
         termRef.current?.focus();
       } catch {
         /* ignore */
       }
-    }, 30);
+    }, 50);
     return () => window.clearTimeout(id);
   }, [active]);
 
