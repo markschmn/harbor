@@ -634,6 +634,63 @@
   text-align: right;
 }
 
+.crumbs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.crumbs::-webkit-scrollbar {
+  height: 0;
+}
+.crumb {
+  padding: 3px 7px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+.crumb:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.crumb.is-last {
+  color: var(--text);
+  font-weight: 600;
+}
+.crumb-sep {
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+.file-row.up-row {
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.file-row.up-row:hover {
+  background: var(--bg-hover);
+}
+.file-pane__selbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border-soft);
+}
+.file-pane__hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 11px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border-soft);
+  background: var(--bg-elev);
+}
+
 /* ---- Transfers ------------------------------------------------------------ */
 
 .transfer-row {

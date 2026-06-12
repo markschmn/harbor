@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   IconArrowUp,
+  IconChevronRight,
   IconDownload,
   IconEdit,
   IconFile,
@@ -34,44 +35,85 @@ function remoteParent(path: string): string {
   return idx <= 0 ? "/" : trimmed.slice(0, idx);
 }
 
+/** Split a path into clickable breadcrumb segments (handles Windows + POSIX). */
+function pathCrumbs(path: string): { label: string; path: string }[] {
+  if (!path) return [];
+  if (/^[A-Za-z]:[\\/]/.test(path)) {
+    const parts = path.replace(/\//g, "\\").split("\\").filter(Boolean);
+    const crumbs: { label: string; path: string }[] = [];
+    let acc = "";
+    parts.forEach((p, i) => {
+      acc = i === 0 ? `${p}\\` : `${acc.replace(/\\$/, "")}\\${p}`;
+      crumbs.push({ label: p, path: acc });
+    });
+    return crumbs;
+  }
+  const parts = path.split("/").filter(Boolean);
+  const crumbs = [{ label: "/", path: "/" }];
+  let acc = "";
+  parts.forEach((p) => {
+    acc += `/${p}`;
+    crumbs.push({ label: p, path: acc });
+  });
+  return crumbs;
+}
+
+function Breadcrumbs({
+  path,
+  onNavigate,
+}: {
+  path: string;
+  onNavigate: (p: string) => void;
+}) {
+  const crumbs = pathCrumbs(path);
+  return (
+    <div className="crumbs" title={path}>
+      {crumbs.map((c, i) => (
+        <span key={c.path} className="row" style={{ gap: 0 }}>
+          {i > 0 && <IconChevronRight size={13} className="crumb-sep" />}
+          <button
+            className={`crumb ${i === crumbs.length - 1 ? "is-last" : ""}`}
+            onClick={() => onNavigate(c.path)}
+          >
+            {c.label}
+          </button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function FileRow({
   entry,
   selected,
   onSelect,
-  onOpen,
+  onNavigate,
+  onTransfer,
   onDragStart,
 }: {
   entry: DirEntry;
   selected: boolean;
   onSelect: () => void;
-  onOpen: () => void;
+  onNavigate: (p: string) => void;
+  onTransfer: (e: DirEntry) => void;
   onDragStart: (e: React.DragEvent) => void;
 }) {
-  const Icon =
-    entry.kind === "directory"
-      ? IconFolder
-      : entry.kind === "symlink"
-        ? IconLink
-        : IconFile;
+  const isDir = entry.kind === "directory";
+  const Icon = isDir ? IconFolder : entry.kind === "symlink" ? IconLink : IconFile;
   return (
     <div
       className={`file-row ${selected ? "is-selected" : ""}`}
       onClick={onSelect}
-      onDoubleClick={onOpen}
-      draggable={entry.kind !== "directory"}
+      onDoubleClick={() => (isDir ? onNavigate(entry.path) : onTransfer(entry))}
+      draggable={!isDir}
       onDragStart={onDragStart}
-      title={entry.name}
+      title={isDir ? `Open ${entry.name}` : `Double-click to transfer ${entry.name}`}
     >
       <div className="file-row__name">
-        <Icon
-          size={16}
-          className={`file-row__icon ${entry.kind === "directory" ? "dir" : ""}`}
-        />
+        <Icon size={16} className={`file-row__icon ${isDir ? "dir" : ""}`} />
         <span>{entry.name}</span>
       </div>
-      <div className="file-row__meta">
-        {entry.kind === "directory" ? "—" : formatBytes(entry.size)}
-      </div>
+      <div className="file-row__meta">{isDir ? "—" : formatBytes(entry.size)}</div>
       <div className="file-row__meta">{formatDate(entry.modified)}</div>
     </div>
   );
@@ -84,11 +126,14 @@ function FilePane({
   loading,
   selected,
   onSelect,
+  onNavigate,
   onUp,
-  onOpenEntry,
+  onTransfer,
   onRefresh,
+  onNewFolder,
+  onRename,
+  onDelete,
   onDropFromOther,
-  actions,
 }: {
   side: Side;
   path: string;
@@ -96,16 +141,23 @@ function FilePane({
   loading: boolean;
   selected: DirEntry | null;
   onSelect: (e: DirEntry | null) => void;
+  onNavigate: (p: string) => void;
   onUp: () => void;
-  onOpenEntry: (e: DirEntry) => void;
+  onTransfer: (e: DirEntry) => void;
   onRefresh: () => void;
+  onNewFolder: () => void;
+  onRename: (e: DirEntry) => void;
+  onDelete: (e: DirEntry) => void;
   onDropFromOther: (payload: DragPayload) => void;
-  actions: React.ReactNode;
 }) {
   const [dragOver, setDragOver] = useState(false);
+  const canGoUp = pathCrumbs(path).length > 1;
+  const TransferIcon = side === "local" ? IconUpload : IconDownload;
+  const transferLabel = side === "local" ? "Upload" : "Download";
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOver(false);
     const raw = e.dataTransfer.getData("application/json");
     if (!raw) return;
@@ -121,10 +173,13 @@ function FilePane({
     <div className="file-pane">
       <div className="file-pane__header">
         <span className="file-pane__title">{side}</span>
-        <div className="path-bar" title={path}>
-          {path || "—"}
-        </div>
-        <button className="btn btn--icon btn--sm btn--ghost" onClick={onUp} title="Up">
+        <Breadcrumbs path={path} onNavigate={onNavigate} />
+        <button
+          className="btn btn--icon btn--sm btn--ghost"
+          onClick={onUp}
+          disabled={!canGoUp}
+          title="Up one level"
+        >
           <IconArrowUp size={16} />
         </button>
         <button
@@ -134,8 +189,33 @@ function FilePane({
         >
           <IconRefresh size={16} />
         </button>
-        {actions}
+        <button
+          className="btn btn--icon btn--sm btn--ghost"
+          onClick={onNewFolder}
+          title="New folder"
+        >
+          <IconPlus size={16} />
+        </button>
       </div>
+
+      {selected && (
+        <div className="file-pane__selbar">
+          {selected.kind !== "directory" && (
+            <button className="btn btn--sm btn--primary" onClick={() => onTransfer(selected)}>
+              <TransferIcon size={15} /> {transferLabel}
+            </button>
+          )}
+          <button className="btn btn--sm" onClick={() => onRename(selected)}>
+            <IconEdit size={14} /> Rename
+          </button>
+          <button className="btn btn--sm btn--danger" onClick={() => onDelete(selected)}>
+            <IconTrash size={14} /> Delete
+          </button>
+          <span className="faint" style={{ marginLeft: "auto", fontSize: 12 }}>
+            {selected.name}
+          </span>
+        </div>
+      )}
 
       <div
         className={`file-list ${dragOver ? "is-dragover" : ""}`}
@@ -148,36 +228,55 @@ function FilePane({
         onClick={(e) => {
           if (e.target === e.currentTarget) onSelect(null);
         }}
-        style={dragOver ? { boxShadow: "inset 0 0 0 2px var(--accent)" } : undefined}
       >
         {loading ? (
           <div className="empty">
             <div className="spinner" />
           </div>
-        ) : entries.length === 0 ? (
-          <EmptyState icon={<IconFolder />} title="Empty folder" />
         ) : (
-          entries.map((entry) => (
-            <FileRow
-              key={entry.path}
-              entry={entry}
-              selected={selected?.path === entry.path}
-              onSelect={() => onSelect(entry)}
-              onOpen={() => onOpenEntry(entry)}
-              onDragStart={(e) => {
-                e.dataTransfer.setData(
-                  "application/json",
-                  JSON.stringify({
-                    side,
-                    path: entry.path,
-                    name: entry.name,
-                    isDir: entry.kind === "directory",
-                  } satisfies DragPayload),
-                );
-              }}
-            />
-          ))
+          <>
+            {canGoUp && (
+              <div className="file-row up-row" onClick={onUp} title="Up one level">
+                <div className="file-row__name">
+                  <IconArrowUp size={16} className="file-row__icon" />
+                  <span>..</span>
+                </div>
+                <div className="file-row__meta" />
+                <div className="file-row__meta" />
+              </div>
+            )}
+            {entries.length === 0 ? (
+              <EmptyState icon={<IconFolder />} title="Empty folder" />
+            ) : (
+              entries.map((entry) => (
+                <FileRow
+                  key={entry.path}
+                  entry={entry}
+                  selected={selected?.path === entry.path}
+                  onSelect={() => onSelect(entry)}
+                  onNavigate={onNavigate}
+                  onTransfer={onTransfer}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData(
+                      "application/json",
+                      JSON.stringify({
+                        side,
+                        path: entry.path,
+                        name: entry.name,
+                        isDir: entry.kind === "directory",
+                      } satisfies DragPayload),
+                    );
+                  }}
+                />
+              ))
+            )}
+          </>
         )}
+      </div>
+
+      <div className="file-pane__hint">
+        <TransferIcon size={13} />
+        Double-click or drag a file to {side === "local" ? "upload" : "download"}
       </div>
     </div>
   );
@@ -293,13 +392,13 @@ export function FileBrowser({
   };
 
   const onDropToRemote = (p: DragPayload) => {
-    if (p.side === "local") upload({ ...placeholderEntry(p) });
+    if (p.side === "local") upload(placeholderEntry(p));
   };
   const onDropToLocal = (p: DragPayload) => {
-    if (p.side === "remote") download({ ...placeholderEntry(p) });
+    if (p.side === "remote") download(placeholderEntry(p));
   };
 
-  const newFolderLocal = () =>
+  const newFolder = (side: Side) =>
     setPrompt(
       <TextPrompt
         title="New folder"
@@ -308,26 +407,13 @@ export function FileBrowser({
         onClose={() => setPrompt(null)}
         onSubmit={async (name) => {
           try {
-            await api.makeLocalDir(joinLocal(localPath, name));
-            loadLocal(localPath);
-          } catch (e) {
-            toast("error", errorMessage(e));
-          }
-        }}
-      />,
-    );
-
-  const newFolderRemote = () =>
-    setPrompt(
-      <TextPrompt
-        title="New folder"
-        label="Folder name"
-        confirmLabel="Create"
-        onClose={() => setPrompt(null)}
-        onSubmit={async (name) => {
-          try {
-            await api.makeRemoteDir(sessionId, joinPath(remotePath, name));
-            loadRemote(remotePath);
+            if (side === "local") {
+              await api.makeLocalDir(joinLocal(localPath, name));
+              loadLocal(localPath);
+            } else {
+              await api.makeRemoteDir(sessionId, joinPath(remotePath, name));
+              loadRemote(remotePath);
+            }
           } catch (e) {
             toast("error", errorMessage(e));
           }
@@ -397,49 +483,17 @@ export function FileBrowser({
         loading={localLoading}
         selected={localSel}
         onSelect={setLocalSel}
+        onNavigate={loadLocal}
         onUp={async () => {
           const parent = await api.localParentDir(localPath);
           if (parent) loadLocal(parent);
         }}
-        onOpenEntry={(e) => e.kind === "directory" && loadLocal(e.path)}
+        onTransfer={upload}
         onRefresh={() => loadLocal(localPath)}
+        onNewFolder={() => newFolder("local")}
+        onRename={(e) => renameEntry("local", e)}
+        onDelete={(e) => deleteEntry("local", e)}
         onDropFromOther={onDropToLocal}
-        actions={
-          <>
-            <button
-              className="btn btn--icon btn--sm btn--ghost"
-              onClick={newFolderLocal}
-              title="New folder"
-            >
-              <IconPlus size={16} />
-            </button>
-            {localSel && (
-              <>
-                <button
-                  className="btn btn--sm"
-                  onClick={() => upload(localSel)}
-                  title="Upload to remote"
-                >
-                  <IconUpload size={15} /> Upload
-                </button>
-                <button
-                  className="btn btn--icon btn--sm btn--ghost"
-                  onClick={() => renameEntry("local", localSel)}
-                  title="Rename"
-                >
-                  <IconEdit size={15} />
-                </button>
-                <button
-                  className="btn btn--icon btn--sm btn--danger"
-                  onClick={() => deleteEntry("local", localSel)}
-                  title="Delete"
-                >
-                  <IconTrash size={15} />
-                </button>
-              </>
-            )}
-          </>
-        }
       />
 
       <FilePane
@@ -449,46 +503,14 @@ export function FileBrowser({
         loading={remoteLoading}
         selected={remoteSel}
         onSelect={setRemoteSel}
+        onNavigate={loadRemote}
         onUp={() => loadRemote(remoteParent(remotePath))}
-        onOpenEntry={(e) => e.kind === "directory" && loadRemote(e.path)}
+        onTransfer={download}
         onRefresh={() => loadRemote(remotePath)}
+        onNewFolder={() => newFolder("remote")}
+        onRename={(e) => renameEntry("remote", e)}
+        onDelete={(e) => deleteEntry("remote", e)}
         onDropFromOther={onDropToRemote}
-        actions={
-          <>
-            <button
-              className="btn btn--icon btn--sm btn--ghost"
-              onClick={newFolderRemote}
-              title="New folder"
-            >
-              <IconPlus size={16} />
-            </button>
-            {remoteSel && (
-              <>
-                <button
-                  className="btn btn--sm"
-                  onClick={() => download(remoteSel)}
-                  title="Download to local"
-                >
-                  <IconDownload size={15} /> Download
-                </button>
-                <button
-                  className="btn btn--icon btn--sm btn--ghost"
-                  onClick={() => renameEntry("remote", remoteSel)}
-                  title="Rename"
-                >
-                  <IconEdit size={15} />
-                </button>
-                <button
-                  className="btn btn--icon btn--sm btn--danger"
-                  onClick={() => deleteEntry("remote", remoteSel)}
-                  title="Delete"
-                >
-                  <IconTrash size={15} />
-                </button>
-              </>
-            )}
-          </>
-        }
       />
 
       {prompt}

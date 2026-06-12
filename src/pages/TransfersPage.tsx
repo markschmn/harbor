@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   IconDownload,
   IconRefresh,
@@ -7,11 +8,7 @@ import {
 } from "@/components/Icon";
 import { EmptyState } from "@/components/ui";
 import { formatBytes } from "@/lib/format";
-import {
-  activeTransferCount,
-  transferList,
-  useTransfers,
-} from "@/stores/transfers";
+import { useTransfers } from "@/stores/transfers";
 import type { TransferTask } from "@/types";
 
 function stateBadge(task: TransferTask) {
@@ -104,9 +101,26 @@ function TransferRow({ task }: { task: TransferTask }) {
 }
 
 export function TransfersPage() {
-  const tasks = useTransfers(transferList);
-  const active = useTransfers(activeTransferCount);
+  // Select the raw record (stable reference) and derive views with useMemo;
+  // returning a freshly-built array straight from the selector would make
+  // zustand's useSyncExternalStore loop and crash the page.
+  const transfers = useTransfers((s) => s.transfers);
   const clearFinished = useTransfers((s) => s.clearFinished);
+  const tasks = useMemo(
+    () =>
+      Object.values(transfers).sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      ),
+    [transfers],
+  );
+  const active = useMemo(
+    () =>
+      Object.values(transfers).filter(
+        (t) => t.state.state === "active" || t.state.state === "queued",
+      ).length,
+    [transfers],
+  );
 
   return (
     <div className="panel">
