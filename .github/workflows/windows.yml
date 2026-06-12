@@ -1,0 +1,44 @@
+name: Windows Build
+
+# Builds only the Windows installers (.msi + .exe) and uploads them as
+# artifacts. The produced x64 build runs on Windows 10 (1809+) and Windows 11;
+# the NSIS installer carries the WebView2 bootstrapper for machines that need it.
+#
+# Trigger manually from the Actions tab (Run workflow) or via the API.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build Windows installers
+        run: npm run tauri build
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: harbor-windows-x64
+          path: |
+            target/release/bundle/msi/*.msi
+            target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
