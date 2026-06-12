@@ -100,6 +100,12 @@ npm run tauri dev      # launches the app with hot-reloading frontend
 npm run tauri build    # produces a native installer/binary for your platform
 ```
 
+This yields `.AppImage`/`.deb`/`.rpm` on Linux, `.msi`/`.exe` on Windows and
+`.dmg` on macOS, under `src-tauri/target/release/bundle/`. Windows installers
+must be built on Windows (they need the MSVC toolchain + WebView2). See
+**[BUILD.md](BUILD.md)** for per-platform instructions and a CI workflow that
+builds all platforms automatically.
+
 ### Run the test suite
 
 ```bash
