@@ -9,6 +9,11 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+# Required so the build job can create/update the GitHub Release and upload
+# the installers (otherwise: "Resource not accessible by integration").
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
