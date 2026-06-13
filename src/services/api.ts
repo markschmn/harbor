@@ -8,6 +8,7 @@ import type {
   DirEntry,
   DiscoveredKey,
   ProfileDraft,
+  ServerMetrics,
   ServerProfile,
   SessionInfo,
   TofuResolution,
@@ -55,6 +56,8 @@ export const resizeTerminal = (sessionId: string, cols: number, rows: number) =>
   invoke<void>("resize_terminal", { sessionId, cols, rows });
 export const respondHostKey = (requestId: string, resolution: TofuResolution) =>
   invoke<void>("respond_host_key", { requestId, resolution });
+export const serverMetrics = (sessionId: string) =>
+  invoke<ServerMetrics>("server_metrics", { sessionId });
 
 // ---- sftp / remote fs -----------------------------------------------------
 

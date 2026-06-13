@@ -7,11 +7,13 @@
 pub mod ports;
 
 mod key_service;
+pub mod metrics_service;
 mod profile_service;
 mod session_service;
 pub mod transfer_service;
 
 pub use key_service::KeyService;
+pub use metrics_service::{parse_metrics, MetricsService, METRICS_COMMAND};
 pub use profile_service::ProfileService;
 pub use session_service::{SessionEvent, SessionService};
 pub use transfer_service::{SftpProvider, TransferEvent, TransferRequest, TransferService};

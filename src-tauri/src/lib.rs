@@ -122,6 +122,7 @@ pub fn run() {
             commands::sessions::send_input,
             commands::sessions::resize_terminal,
             commands::sessions::respond_host_key,
+            commands::metrics::server_metrics,
             commands::sftp::list_remote_dir,
             commands::sftp::remote_home_dir,
             commands::sftp::make_remote_dir,

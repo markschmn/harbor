@@ -3,7 +3,7 @@ import * as api from "@/services/api";
 import type { SessionInfo, SessionStatus } from "@/types";
 import { errorMessage, toast } from "./toast";
 
-export type SessionPanel = "terminal" | "files";
+export type SessionPanel = "terminal" | "files" | "metrics";
 export const MANAGER_TAB = "manager";
 
 export interface SessionUi {

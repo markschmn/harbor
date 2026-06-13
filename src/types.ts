@@ -111,6 +111,62 @@ export interface AppInfo {
   platform: string;
 }
 
+// ---- server metrics -------------------------------------------------------
+
+export interface LoadAverage {
+  one: number;
+  five: number;
+  fifteen: number;
+}
+
+export interface CpuMetrics {
+  usage_percent: number;
+  cores: number;
+  model: string;
+  per_core: number[];
+}
+
+export interface MemoryMetrics {
+  total_kb: number;
+  used_kb: number;
+  available_kb: number;
+  used_percent: number;
+}
+
+export interface SwapMetrics {
+  total_kb: number;
+  used_kb: number;
+  used_percent: number;
+}
+
+export interface DiskUsage {
+  filesystem: string;
+  mount: string;
+  total_kb: number;
+  used_kb: number;
+  available_kb: number;
+  used_percent: number;
+}
+
+export interface ProcessInfo {
+  cpu_percent: number;
+  mem_percent: number;
+  command: string;
+}
+
+export interface ServerMetrics {
+  hostname: string;
+  os: string;
+  uptime_seconds: number;
+  load: LoadAverage;
+  cpu: CpuMetrics;
+  memory: MemoryMetrics;
+  swap: SwapMetrics;
+  disks: DiskUsage[];
+  processes: ProcessInfo[];
+  unsupported: boolean;
+}
+
 export interface HostKeyPrompt {
   request_id: string;
   host: string;

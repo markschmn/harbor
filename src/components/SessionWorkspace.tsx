@@ -1,6 +1,7 @@
 import { TerminalPane } from "./TerminalPane";
 import { FileBrowser } from "./FileBrowser";
-import { IconFolder, IconTerminal } from "./Icon";
+import { MetricsPane } from "./MetricsPane";
+import { IconActivity, IconFolder, IconTerminal } from "./Icon";
 import { useSessions } from "@/stores/sessions";
 
 /**
@@ -41,6 +42,14 @@ export function SessionWorkspace({
               <IconFolder size={14} /> Files
             </span>
           </button>
+          <button
+            className={panel === "metrics" ? "is-active" : ""}
+            onClick={() => setPanel(sessionId, "metrics")}
+          >
+            <span className="row" style={{ gap: 6 }}>
+              <IconActivity size={14} /> Metrics
+            </span>
+          </button>
         </div>
         <div className="spacer" />
         <span className="badge badge--accent">{session.info.title}</span>
@@ -71,6 +80,17 @@ export function SessionWorkspace({
           }}
         >
           <FileBrowser sessionId={sessionId} active={active && panel === "files"} />
+        </div>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            minWidth: 0,
+            display: panel === "metrics" ? "flex" : "none",
+            flexDirection: "column",
+          }}
+        >
+          <MetricsPane sessionId={sessionId} active={active && panel === "metrics"} />
         </div>
       </div>
     </div>

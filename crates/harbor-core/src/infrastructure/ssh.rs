@@ -33,8 +33,8 @@ use tokio::sync::mpsc;
 use tokio::sync::Mutex as AsyncMutex;
 
 use crate::application::ports::{
-    ConnectionParams, HostKeyPrompt, HostKeyPrompter, KnownHostsStore, SftpClient, ShellEvent,
-    ShellHandle, ShellInput, SshSession, SshTransport,
+    CommandOutput, ConnectionParams, HostKeyPrompt, HostKeyPrompter, KnownHostsStore, SftpClient,
+    ShellEvent, ShellHandle, ShellInput, SshSession, SshTransport,
 };
 use crate::domain::auth::Credential;
 use crate::domain::error::{HarborError, Result};
@@ -394,6 +394,34 @@ impl SshSession for RusshSession {
             session_id: self.id,
             input: input_tx,
             output: output_rx,
+        })
+    }
+
+    async fn exec(&self, command: &str) -> Result<CommandOutput> {
+        let mut channel = self.handle.channel_open_session().await.map_err(ssh_err)?;
+        channel.exec(true, command).await.map_err(ssh_err)?;
+
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+        let mut exit_code = None;
+        // Drain the channel until it closes, separating stdout from stderr
+        // (extended data, `ext == 1`). The exit status arrives before Close.
+        loop {
+            match channel.wait().await {
+                Some(ChannelMsg::Data { data }) => stdout.extend_from_slice(&data),
+                Some(ChannelMsg::ExtendedData { data, ext }) if ext == 1 => {
+                    stderr.extend_from_slice(&data)
+                }
+                Some(ChannelMsg::ExitStatus { exit_status }) => exit_code = Some(exit_status),
+                Some(ChannelMsg::Close) | None => break,
+                Some(_) => {}
+            }
+        }
+
+        Ok(CommandOutput {
+            stdout,
+            stderr,
+            exit_code,
         })
     }
 

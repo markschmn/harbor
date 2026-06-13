@@ -7,6 +7,7 @@
 pub mod app;
 pub mod keys;
 pub mod local_fs;
+pub mod metrics;
 pub mod profiles;
 pub mod security;
 pub mod sessions;

@@ -130,14 +130,30 @@ pub trait SshTransport: Send + Sync {
     ) -> Result<Arc<dyn SshSession>>;
 }
 
-/// A live SSH connection capable of opening interactive shells and an SFTP
-/// channel.
+/// The captured result of a single non-interactive remote command.
+#[derive(Debug, Clone, Default)]
+pub struct CommandOutput {
+    /// Bytes written to standard output.
+    pub stdout: Vec<u8>,
+    /// Bytes written to standard error.
+    pub stderr: Vec<u8>,
+    /// The process exit status, if the server reported one.
+    pub exit_code: Option<u32>,
+}
+
+/// A live SSH connection capable of opening interactive shells, running one-shot
+/// commands and an SFTP channel.
 #[async_trait]
 pub trait SshSession: Send + Sync {
     fn id(&self) -> SessionId;
 
     /// Open an interactive shell with a PTY of the given size.
     async fn open_shell(&self, size: PtySize) -> Result<ShellHandle>;
+
+    /// Run a single non-interactive command to completion on a fresh channel,
+    /// capturing its output. Used for background probes (e.g. server metrics)
+    /// that must not disturb the interactive shell.
+    async fn exec(&self, command: &str) -> Result<CommandOutput>;
 
     /// Open (or reuse) the SFTP subsystem on this connection.
     async fn sftp(&self) -> Result<Arc<dyn SftpClient>>;
@@ -147,6 +163,14 @@ pub trait SshSession: Send + Sync {
 
     /// Gracefully disconnect.
     async fn close(&self) -> Result<()>;
+}
+
+/// Runs one-shot commands against a live session. This port lets services that
+/// only need command output (e.g. metrics collection) stay decoupled from the
+/// concrete [`SessionService`], mirroring [`super::transfer_service::SftpProvider`].
+#[async_trait]
+pub trait CommandRunner: Send + Sync {
+    async fn exec(&self, id: SessionId, command: &str) -> Result<CommandOutput>;
 }
 
 /// Input sent toward a remote shell.

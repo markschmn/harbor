@@ -125,6 +125,7 @@ pub struct AppState {
     pub profiles: Arc<ProfileService>,
     pub sessions: Arc<SessionService>,
     pub transfers: Arc<TransferService>,
+    pub metrics: Arc<MetricsService>,
     pub keys: Arc<KeyService>,
     pub known_hosts: Arc<dyn KnownHostsStore>,
     pub secrets: Arc<dyn SecretStore>,
@@ -155,12 +156,16 @@ impl AppState {
         let transfers = Arc::new(TransferService::new(
             Arc::clone(&sessions) as Arc<dyn harbor_core::application::SftpProvider>
         ));
+        let metrics = Arc::new(MetricsService::new(
+            Arc::clone(&sessions) as Arc<dyn harbor_core::application::ports::CommandRunner>
+        ));
         let keys = Arc::new(KeyService::new(key_discovery));
 
         Ok(Self {
             profiles,
             sessions,
             transfers,
+            metrics,
             keys,
             known_hosts,
             secrets: secrets_for_state,

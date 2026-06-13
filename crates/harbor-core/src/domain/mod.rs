@@ -8,6 +8,7 @@ pub mod error;
 pub mod file;
 pub mod host_key;
 pub mod key;
+pub mod metrics;
 pub mod profile;
 pub mod session;
 pub mod transfer;

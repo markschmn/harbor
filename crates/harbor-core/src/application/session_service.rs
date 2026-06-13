@@ -11,8 +11,8 @@ use crate::domain::profile::ProfileId;
 use crate::domain::session::{PtySize, SessionId, SessionInfo, SessionStatus};
 
 use super::ports::{
-    ConnectionParams, HostKeyPrompter, KnownHostsStore, SftpClient, ShellHandle, SshSession,
-    SshTransport,
+    CommandOutput, CommandRunner, ConnectionParams, HostKeyPrompter, KnownHostsStore, SftpClient,
+    ShellHandle, SshSession, SshTransport,
 };
 use super::transfer_service::SftpProvider;
 use async_trait::async_trait;
@@ -114,6 +114,11 @@ impl SessionService {
         self.session(id).await?.open_shell(size).await
     }
 
+    /// Run a one-shot command on a session and capture its output.
+    pub async fn exec(&self, id: SessionId, command: &str) -> Result<CommandOutput> {
+        self.session(id).await?.exec(command).await
+    }
+
     /// Get the SFTP client for a session.
     pub async fn sftp(&self, id: SessionId) -> Result<Arc<dyn SftpClient>> {
         self.session(id).await?.sftp().await
@@ -163,6 +168,15 @@ impl SftpProvider for SessionService {
     }
 }
 
+/// Lets the metrics collector run probe commands on any live session without
+/// coupling it to the concrete [`SessionService`].
+#[async_trait]
+impl CommandRunner for SessionService {
+    async fn exec(&self, id: SessionId, command: &str) -> Result<CommandOutput> {
+        self.exec(id, command).await
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -207,6 +221,9 @@ mod tests {
                 input: _in_tx,
                 output: out_rx,
             })
+        }
+        async fn exec(&self, _command: &str) -> Result<CommandOutput> {
+            Ok(CommandOutput::default())
         }
         async fn sftp(&self) -> Result<Arc<dyn SftpClient>> {
             Err(HarborError::Sftp("not supported in fake".into()))
