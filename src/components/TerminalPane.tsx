@@ -102,6 +102,26 @@ export function TerminalPane({
         .catch(() => {});
     };
 
+    // OSC 52 — programs inside the shell set the system clipboard by emitting
+    // ESC ] 52 ; c ; <base64> BEL. This is how tmux (with `set-clipboard on`)
+    // and vim copy out: a mouse-drag or yank in tmux fires OSC 52 rather than
+    // creating an xterm selection, so without this handler "copy from tmux"
+    // silently does nothing. xterm has no built-in handler, so bridge it to
+    // the OS clipboard. Clipboard *reads* (payload "?") are refused so a remote
+    // host can never exfiltrate the local clipboard.
+    const oscSub = term.parser.registerOscHandler(52, (data) => {
+      const sep = data.indexOf(";");
+      const payload = sep === -1 ? data : data.slice(sep + 1);
+      if (!payload || payload === "?") return true;
+      try {
+        const text = new TextDecoder().decode(base64ToBytes(payload));
+        if (text) writeClipboard(text).catch(() => {});
+      } catch {
+        /* malformed base64 — ignore */
+      }
+      return true;
+    });
+
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== "keydown") return true;
       const primary = IS_MAC ? e.metaKey && !e.ctrlKey : e.ctrlKey && e.shiftKey;
@@ -225,6 +245,7 @@ export function TerminalPane({
       if (rafId) cancelAnimationFrame(rafId);
       host.removeEventListener("mousedown", onMouseDown, true);
       host.removeEventListener("contextmenu", onContextMenu);
+      oscSub.dispose();
       dataSub.dispose();
       resizeSub.dispose();
       ro.disconnect();
