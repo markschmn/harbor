@@ -2,10 +2,16 @@ import { useEffect, useRef } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import {
+  readText as readClipboard,
+  writeText as writeClipboard,
+} from "@tauri-apps/plugin-clipboard-manager";
 import * as api from "@/services/api";
 import { EVENTS, on } from "@/services/events";
 import { errorMessage } from "@/stores/toast";
 import type { TerminalClosed, TerminalData } from "@/types";
+
+const IS_MAC = navigator.userAgent.includes("Mac");
 
 const TERMINAL_THEME = {
   background: "#0a0e14",
@@ -69,6 +75,73 @@ export function TerminalPane({
     term.open(host);
     termRef.current = term;
     fitRef.current = fit;
+
+    // --- Universal copy/paste -------------------------------------------
+    // Works regardless of what runs inside the shell (tmux, vim, less …),
+    // bridging the OS clipboard so text can move in and out of Harbor.
+    //
+    //   • Copy : Ctrl+Shift+C / ⌘C, or right-click while text is selected.
+    //   • Paste: Ctrl+Shift+V / ⌘V, middle-click, or right-click (no
+    //            selection). Routed through term.paste() so bracketed-paste
+    //            mode keeps multi-line input from auto-running in tmux/vim.
+    //
+    // Selecting text while an app grabs the mouse (e.g. tmux mouse mode):
+    // hold Shift while dragging — xterm then makes a local selection instead
+    // of forwarding the drag to the remote program.
+    const copySelection = (): boolean => {
+      const selection = term.getSelection();
+      if (!selection) return false;
+      writeClipboard(selection).catch(() => {});
+      return true;
+    };
+    const pasteClipboard = () => {
+      readClipboard()
+        .then((text) => {
+          if (text) term.paste(text);
+        })
+        .catch(() => {});
+    };
+
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type !== "keydown") return true;
+      const primary = IS_MAC ? e.metaKey && !e.ctrlKey : e.ctrlKey && e.shiftKey;
+      if (!primary) return true;
+      if (e.code === "KeyC") {
+        // Always swallow the copy chord so Ctrl+Shift+C can never fall
+        // through to xterm and be sent as a bare Ctrl+C (SIGINT).
+        e.preventDefault();
+        copySelection();
+        return false;
+      }
+      if (e.code === "KeyV") {
+        // preventDefault stops the webview firing its own native paste event
+        // into xterm's textarea, which would double up with term.paste().
+        e.preventDefault();
+        pasteClipboard();
+        return false;
+      }
+      return true;
+    });
+
+    // Mouse paste/copy. Capture phase + stopPropagation so these never reach
+    // xterm's own mouse handling or the remote app's mouse reporting.
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button === 1) {
+        // Middle-click → paste (X11 convention).
+        e.preventDefault();
+        e.stopPropagation();
+        pasteClipboard();
+      } else if (e.button === 2) {
+        // Right-click → copy a selection if present, otherwise paste.
+        e.preventDefault();
+        e.stopPropagation();
+        if (copySelection()) term.clearSelection();
+        else pasteClipboard();
+      }
+    };
+    const onContextMenu = (e: MouseEvent) => e.preventDefault();
+    host.addEventListener("mousedown", onMouseDown, true);
+    host.addEventListener("contextmenu", onContextMenu);
 
     const safeFit = () => {
       if (host.clientHeight > 1 && host.clientWidth > 1) {
@@ -150,6 +223,8 @@ export function TerminalPane({
     return () => {
       disposed = true;
       if (rafId) cancelAnimationFrame(rafId);
+      host.removeEventListener("mousedown", onMouseDown, true);
+      host.removeEventListener("contextmenu", onContextMenu);
       dataSub.dispose();
       resizeSub.dispose();
       ro.disconnect();
